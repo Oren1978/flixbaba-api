@@ -1,14 +1,11 @@
 from flask import Flask, jsonify
 import requests
-from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 
-# הגדרות כלליות
-BASE_URL = "https://flixbaba.app/"
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
-}
+# URL של ה-API הפנימי של Flixbaba
+# שימו לב: זו הכתובת שאליה נשלחות בקשות מהאתר עצמו
+FLIXBABA_API_URL = "https://be.flixbaba.tv/media"
 
 @app.route("/")
 def index():
@@ -17,35 +14,31 @@ def index():
 @app.route("/movies", methods=["GET"])
 def get_movies():
     try:
-        # שלב 1: שליפת עמוד הבית של האתר
-        response = requests.get(BASE_URL, headers=HEADERS)
+        # שליחת בקשה ל-API הפנימי של Flixbaba
+        params = {"mediaType": "movie", "page": 1, "limit": 50}
+        headers = {
+            "Origin": "https://flixbaba.app",
+            "Referer": "https://flixbaba.app/",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
+        }
+        response = requests.get(FLIXBABA_API_URL, headers=headers, params=params)
         response.raise_for_status()
 
-        soup = BeautifulSoup(response.text, 'html.parser')
+        data = response.json()
+        movies_raw = data.get("items", [])
+
         movies = []
-        
-        # שלב 2: מציאת כל קופסאות הסרטים
-        movie_items = soup.select(".movie-item-style-2")
-
-        # שלב 3: חילוץ נתונים מכל סרט
-        for item in movie_items:
-            image_tag = item.select_one("img.lozad")
-            title_tag = item.select_one("h6 a")
-
-            if image_tag and title_tag:
-                title = title_tag.text.strip()
-                image_url = image_tag.get("data-src")
-                movie_page_url = title_tag.get("href")
-
-                if title and image_url and movie_page_url:
-                    full_image_url = f"{BASE_URL}{image_url}"
-                    full_movie_page_url = f"{BASE_URL}{movie_page_url}"
-
-                    movies.append({
-                        "title": title,
-                        "image": full_image_url,
-                        "page_url": full_movie_page_url
-                    })
+        for m in movies_raw:
+            title = m.get("title")
+            poster = m.get("poster")
+            if title and poster:
+                movies.append({
+                    "id": m.get("id"),
+                    "title": title,
+                    "poster": poster,
+                    "year": m.get("releaseDate"),
+                    "link": f"https://flixbaba.app/movie/{m.get('id')}/{m.get('slug')}/watch"
+                })
 
         return jsonify(movies)
 
