@@ -21,7 +21,7 @@ def get_movies():
         response = requests.get(BASE_URL, headers=HEADERS)
         response.raise_for_status()
 
-        soup = BeautifulSoup(response.text, 'html.parser')
+        soup = BeautifulSoup(response.text, 'lxml')
         movies = []
         
         # שלב 2: מציאת כל קופסאות הסרטים
