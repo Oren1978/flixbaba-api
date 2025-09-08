@@ -13,26 +13,24 @@ def home():
 
 @app.route('/movies')
 def get_movies():
-    url = "https://flixbaba.app"
+    url = "https://flixbaba.tv"
     try:
-        response = requests.get(url)
+        response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
         soup = BeautifulSoup(response.text, "html.parser")
 
         movies = []
-        movie_items = soup.select(".movie-poster")
 
-        for item in movie_items:
-            link_tag = item.find("a")
-            img_tag = item.find("img")
-
-            if link_tag and img_tag:
+        # בדיקה לפי מה שראינו בקוד: תמונות של הסרטים
+        for item in soup.select("a.MuiBox-root img"):  # CSS class מהאתר
+            parent = item.find_parent("a")
+            if parent:
                 movies.append({
-                    "title": img_tag.get("alt"),
-                    "image": img_tag.get("data-src") or img_tag.get("src"),
-                    "link": "https://flixbaba.app" + link_tag.get("href")
+                    "title": item.get("alt"),
+                    "image": item.get("src"),
+                    "link": "https://flixbaba.tv" + parent.get("href")
                 })
 
         return jsonify(movies)
-    
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
