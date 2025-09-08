@@ -4,36 +4,31 @@ from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 
-@app.route("/movies", methods=["GET"])
+@app.route('/')
+def index():
+    return jsonify({"message": "ברוך הבא ל־Flixbaba API!", "status": "online"})
+
+@app.route('/movies')
 def get_movies():
-    url = "https://flixbaba.app/"
+    url = 'https://flixbaba.app'
     headers = {
-        "User-Agent": "Mozilla/5.0"
+        'User-Agent': 'Mozilla/5.0'
     }
+    response = requests.get(url, headers=headers)
+    soup = BeautifulSoup(response.text, 'html.parser')
 
-    try:
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        return jsonify({"error": str(e)}), 500
-
-    soup = BeautifulSoup(response.text, "html.parser")
     movies = []
 
-    # מצא כרטיסי סרטים לפי מחלקה
-    for card in soup.select("a.MuiCardActionArea-root"):
-        title = card.get("title") or card.text.strip()
-        link = "https://flixbaba.app" + card.get("href")
-        image_tag = card.select_one("img")
-        image = image_tag.get("src") if image_tag else None
+    for card in soup.select('.MuiCard-root'):
+        title = card.select_one('.MuiTypography-h5')
+        image = card.select_one('img')
+        link = card.find('a')
 
-        movies.append({
-            "title": title,
-            "link": link,
-            "image": image
-        })
+        if title and image and link:
+            movies.append({
+                'title': title.text.strip(),
+                'image': image['src'],
+                'link': url + link['href']
+            })
 
     return jsonify(movies)
-
-if __name__ == "__main__":
-    app.run(debug=True)
